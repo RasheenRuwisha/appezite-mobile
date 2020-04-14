@@ -65,8 +65,52 @@ const initNavigataion = createStackNavigator({
             )
         })
     },
-    Cart: {
-        screen: Cart,
+    Home: {
+        screen: Home,
+        navigationOptions: {
+            header: null
+        }
+    },
+    Login: {
+        screen: Login,
+        navigationOptions: {
+            header: null
+        }
+    },
+    Register: {
+        screen: Register,
+        navigationOptions: {
+            header: null
+        }
+    },
+    Checkout: Checkout,
+    Products: Products,
+    Product: {
+        screen: Product,
+        navigationOptions: {
+            title: 'Product'
+        }
+    },
+    CheckoutSuccess: CheckoutSuccess
+}, {
+
+    defaultNavigationOptions: {
+        headerStyle: {
+            backgroundColor: THEME_COLOR
+        },
+        headerTintColor: '#fff'
+    }
+})
+
+const mainNav = createStackNavigator({
+    Loader: {
+        screen: Loader,
+        navigationOptions: {
+            header: null
+        }
+    },
+    Categories: {
+        screen: Categories,
         navigationOptions: ({navigation}) => ({
             headerLeft: () => (
                 <TouchableOpacity

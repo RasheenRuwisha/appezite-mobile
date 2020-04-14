@@ -31,6 +31,7 @@ import moment from 'moment';
 const {width, height} = Dimensions.get('window');
 import RNPaypal from 'react-native-paypal-lib';
 import { StackActions, NavigationActions } from 'react-navigation';
+import styles from './CheckoutStyles';
 
 class Checkout extends React.Component {
 
@@ -49,7 +50,7 @@ class Checkout extends React.Component {
         addressline2: '',
         payment: 'Pay at Counter',
         notes: '',
-        selectedDate: new Date(),
+        selectedDate: moment(new Date()).format('DD-MM-YYYY HH:mm'),
         total: 0,
         drawerState: 'cart',
         deliveryMethod: 'Pick Up',
@@ -61,8 +62,9 @@ class Checkout extends React.Component {
         dateChanged:false,
         deliveryCharge:0,
         selectedState: undefined,
-        selectedCity: undefined
-        
+        selectedCity: undefined,
+        headerActive:"details",
+        page:"order"
     };
 
     componentDidUpdate(previousProps) {
@@ -84,7 +86,7 @@ class Checkout extends React.Component {
         let deliveryLocations = this.props.business.business.deliveryLocation;
         var price = 0;
         for (var i = 0; i < this.props.cart.cart.products.length; i++) {
-            (price) = parseInt(price) + parseInt(this.props.cart.cart.products[i].price);
+            (price) = parseFloat(price) + parseFloat(this.props.cart.cart.products[i].price);
         }
         this.setState({modal: this.props.modal, name:this.props.user.name, total:price});
 
@@ -158,7 +160,7 @@ class Checkout extends React.Component {
         let deliveryLocation = deliveryLocations.find(x => x.city === e && x.state === this.state.selectedState);
         let price  = deliveryLocation.price;
         var total = this.state.total;
-        total = parseInt(total) -  parseInt(this.state.deliveryCharge) + parseInt(price);
+        total = parseFloat(total) -  parseFloat(this.state.deliveryCharge) + parseFloat(price);
         this.setState({selectedCity: e, total: total, deliveryCharge: price});
         this.handleCityError()
     };
@@ -244,6 +246,10 @@ class Checkout extends React.Component {
 
         let selectDate = moment(date).format('DD-MM-YYYY HH:mm')
         this.setState({selectedDate: selectDate, date:date,dateChanged:true})
+        if (!moment(date).isAfter(new Date())) {
+                    this.setState({dateError: 'Plese Select a valid Time'});
+                    return true;
+                }
         for (var i = 0; i < dates.length; i++) {
             if (dates[i].dayOfWeek.toLowerCase() === selectedPickupDate.toLowerCase()) {
                 if (!moment(date).isAfter(new Date())) {
@@ -262,6 +268,33 @@ class Checkout extends React.Component {
 
     }
 
+    checkDateErrors(){
+        handleDateChange = (date) => {
+            let dates = this.props.business.business.pickUpHours;
+            let preparationTime = this.props.business.business.orderPreparationTime;
+    
+            let selectedPickupDate = moment(date).format('dddd');
+            let selectedPickupTime = moment(date).add(parseInt(preparationTime), 'minutes').format('HH:mm');
+    
+            let selectDate = moment(date).format('DD-MM-YYYY HH:mm')
+            for (var i = 0; i < dates.length; i++) {
+                if (dates[i].dayOfWeek.toLowerCase() === selectedPickupDate.toLowerCase()) {
+                    if (!moment(date).isAfter(new Date())) {
+                        this.setState({dateError: 'Plese Select a valid Time'});
+                        return true;
+                    } else if (selectedPickupTime > dates[i].from && selectedPickupTime < dates[i].to) {
+                        this.setState({dateError: null});
+                        return false;
+                    } else {
+                        this.setState({dateError: 'Restaurant closed on selected time'});
+                        return true;
+    
+                    }
+                }
+            }
+    
+        }
+    }
     renderAddressFields = () => {
         let states = []
         for (let i = 0; i < this.state.states.length; i++) {
@@ -309,6 +342,7 @@ class Checkout extends React.Component {
         )
     }
 
+
     handleCheckout(){
         var addressError = false;
         var address2Error = false;
@@ -316,7 +350,7 @@ class Checkout extends React.Component {
         var cityError = false;
 
         var nameError = this.handleNameError();
-        var dateError = this.handleDateChange(this.state.selectedDate);
+        var dateError = this.checkDateErrors(this.state.selectedDate);
         if (this.state.deliveryMethod === 'Delivery') {
             addressError = this.handleAddress1Error();
             address2Error = this.handleAddress2Error();
@@ -326,6 +360,11 @@ class Checkout extends React.Component {
 
         if (!nameError && !dateError  && !addressError && !address2Error && !stateError && !cityError) {
             var delivery = '';
+            var price = 0;
+            for (var i = 0; i < this.props.cart.cart.products.length; i++) {
+                (price) = parseFloat(price) + parseFloat(this.props.cart.cart.products[i].price);
+            }
+            
             if (this.deliveryMethod === 'Delivery') {
                 delivery = this.state.addressline1 + this.state.addressline2 + this.state.selectedCity + this.state.selectedState;
             }
@@ -333,6 +372,8 @@ class Checkout extends React.Component {
             var orderedDate = moment(new Date()).format('DD-MM-YYYY HH:mm');
             var order = {
                 businessId: this.props.business.business.businessId,
+                businessEmail: this.props.business.business.email,
+                businessName:this.props.business.business.name,
                 products: this.props.cart.cart.products,
                 docType: 'PurchaseOrder',
                 orderedAt: orderedDate,
@@ -344,11 +385,37 @@ class Checkout extends React.Component {
                 customerName: this.state.name,
                 platform: 'WEBSTORE',
                 payment: 'Pay At Counter',
+            total: this.calculateSubTotal(),
+            deliveryCharge: this.state.deliveryCharge,
+            customerNumber: this.props.user.phone,
+            notificationTokens : this.props.user.notificationTokens,
+            businessNotification: this.props.business.business.businessNotification,
+            businessUserNotification: this.props.business.business.notificationToken
             }
+            this.setState({headerActive:"details", page:"ordering"})
 
             this
                 .props
                 .placeOrder(order);
+        }else{
+        this.setState({headerActive:"details"})
+
+        }
+    }
+
+    handleErrors(){
+        var addressError = false;
+        var address2Error = false;
+
+        var dateError = this.checkDateErrors(this.state.selectedDate);
+        var nameError = this.handleNameError();
+        if (this.state.deliveryMethod === 'Delivery') {
+            addressError = this.handleAddress1Error();
+            address2Error = this.handleAddress2Error();
+        }
+
+        if (!nameError && !addressError && !dateError && !address2Error) {
+            this.setState({headerActive:"summary"})
         }
     }
 
@@ -357,25 +424,27 @@ class Checkout extends React.Component {
         var addressError = false;
         var address2Error = false;
 
-        var dateError = this.handleDateChange(this.state.selectedDate);
+        var dateError = this.checkDateErrors(this.state.selectedDate);
         var nameError = this.handleNameError();
         if (this.state.deliveryMethod === 'Delivery') {
             addressError = this.handleAddress1Error();
             address2Error = this.handleAddress2Error();
         }
-
+      
         if (!nameError && !addressError && !dateError && !address2Error) {
+    
             var delivery = '';
             if (this.deliveryMethod === 'Delivery') {
                 delivery = this.state.addressline1 + this.state.addressline2 + this.state.selectedCity + this.state.selectedState;
             }
             var order = {};
 
+            var price = this.calculateGrandTotal()/180
             RNPaypal.paymentRequest({
-                clientId: 'AbWZf5VD75nz75_a32ChZiz7qPc9zF_FqtBozZGTtu0zyIvv6yJReGbCu8IG5358rildRDBcAHZ78q69',
+                clientId: this.props.business.business.paypalSecret,
                 environment: RNPaypal.ENVIRONMENT.SANDBOX,
                 intent: RNPaypal.INTENT.SALE,
-                price: 60,
+                price: parseFloat(price).toFixed(2),
                 currency: 'USD',
                 description: `Android testing`,
                 acceptCreditCards: true
@@ -383,6 +452,8 @@ class Checkout extends React.Component {
                 var orderedDate = moment(new Date()).format('DD-MM-YYYY HH:mm');
                 var order = {
                     businessId: this.props.business.business.businessId,
+                    businessEmail: this.props.business.business.email,
+                    businessName:this.props.business.business.name,
                     products: this.props.cart.cart.products,
                     docType: 'PurchaseOrder',
                     orderedAt: orderedDate,
@@ -394,7 +465,15 @@ class Checkout extends React.Component {
                     customerName: this.state.name,
                     platform: 'IOS',
                     payment: response,
+            total: this.calculateSubTotal(),
+            deliveryCharge: this.state.deliveryCharge,
+            customerNumber: this.props.user.phone,
+            notificationTokens : this.props.user.notificationTokens,
+            businessNotification: this.props.business.business.businessNotification,
+            businessUserNotification: this.props.business.business.notificationToken
                 }
+        this.setState({headerActive:"details", page:"ordering"})
+
                 this
                 .props
                 .placeOrder(order);
@@ -405,24 +484,38 @@ class Checkout extends React.Component {
 
            
            
+        }else{
+            this.setState({headerActive:"details"})
         }
     }
 
-    render() {
-        const {navigate} = this.props.navigation;
-        return (
-            <SafeAreaView>
-                <View style={{
-                        height: height,
-                    }}>
-                    <View 
-                                    style={{
-                                    flex: 0.9,
-                                    alignItems:"center"
-                                }}>
-                                    
-                    <View style={[styles.container]}>
+    calculateSubTotal = () => {
+        var price = 0;
+        for (var i = 0; i < this.props.cart.cart.products.length; i++) {
+            (price) = parseFloat(price) + parseFloat(this.props.cart.cart.products[i].price);
+        }
+        return (price)
+    }
+
+    calculateGrandTotal = () => {
+        var price = 0;
+        for (var i = 0; i < this.props.cart.cart.products.length; i++) {
+            (price) = parseFloat(price) + parseFloat(this.props.cart.cart.products[i].price);
+        }
+        if (this.state.deliveryMethod == 'Delivery') {
+            price = price + parseFloat(this.state.deliveryCharge);
+        }
+        return (price)
+    }
+
+
+    renderOrderPage(){
+        return(
+            <View>
+                 <View style={[styles.container]}>
                             
+                
+                        
                             <Text style={[this.state.nameError=== null ? styles.labelText : styles.errorLabel]}>
                                 {
                                     this.state.nameError == null ? 'Name' : this.state.nameError 
@@ -450,12 +543,12 @@ class Checkout extends React.Component {
                     placeholderTextColor="black"
 
                         onValueChange={(value) => this.handleCollectionChange(value)}
-                        items={[
+                        items={this.props.business.business.deliveryEnabled  && (this.props.business.business.deliveryLocation != null) ?[
                          {
                             label: "Delivery",
                             value: "Delivery"
                         }
-                    ]}
+                    ]:[]}
                     style={{
                         ...pickerSelectStyles
                       }}
@@ -474,13 +567,13 @@ class Checkout extends React.Component {
                     placeholderTextColor="black"
                     
                         onValueChange={(value) => this.handlePaymentChange(value)}
-                        items={[
+                        items={this.props.business.business.paypalSecret != "" && this.props.business.business.paypalSecret != null ?[
                        {
                             label: "Card",
                             value: "Card"
                         }
                         
-                    ]}
+                    ]:[]}
                     style={{
                         ...pickerSelectStyles
                       }}
@@ -504,87 +597,185 @@ class Checkout extends React.Component {
                 {this.state.dateError == null && this.state.dateChanged ?  <Text onPress={()=>{this.toggleModal()}}>Choose</Text> :  <Text onPress={()=>{alert('Please select a valid time')}}>Choose</Text> }
                             </ModalContent>
                         </Modal>
+            </View>
+        )
+    }
+
+
+    renderOrderingPage(){
+        return(
+            <View style={[styles.container]}>
+                            
+                
+                        
+            <Text >
+               Loading
+            </Text>
+    </View>
+    
+        )
+    }
+    renderDetailsView(){
+        return(
+            <View 
+                                    style={{
+                                    flex: 0.89,
+                                    alignItems:"center"
+                                }}>
+                                    
+                   
 
 
                        
-    
+    {this.state.page == 'order' ? this.renderOrderPage() : this.renderOrderingPage()}
                     
 
                     
 
 </View>
-<View>
-{
-    this.state.payment === 'Pay at Counter'?
-    <Button onPress={() => this.handleCheckout()} title='Checkout'/>
-:
-<Button onPress={() => this.handlePayment()} title='Checkout'/>
+        )
+    }
 
+    renderPaymentButton(){
+        return(
+            <View>
+                <View style={[styles.row, styles.summaryContainer,styles.totalText,{borderTopWidth:1,}]}>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextRight]}>Subtotal : </Text>
+        </View>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextLeft]}>{this.calculateSubTotal()}</Text>
+        </View>
+    </View>
+
+
+    {this.state.deliveryMethod == 'Delivery'
+                                        ?
+                                        <View style={[styles.row, styles.summaryContainer,styles.totalText]}>
+                                        <View style={[styles.summaryText]}>
+                                            <Text style={[styles.summaryTextRight]}>Delivery fee : </Text>
+                                        </View>
+                                        <View style={[styles.summaryText]}>
+                                            <Text style={[styles.summaryTextLeft]}>{this.state.deliveryCharge}</Text>
+                                        </View>
+                                    </View> 
+                                        : null}
+
+    <View style={[styles.row, styles.summaryContainer,styles.totalText]}>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextRight]}>Grandtotal : </Text>
+        </View>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextLeft]}>{this.calculateGrandTotal()}</Text>
+        </View>
+    </View>
+
+            {
+                this.state.payment === 'Pay at Counter'?
+                <Button buttonStyle={[styles.bottomButton]} onPress={() => this.handleCheckout()} title='Checkout'/>
+            :
+            <Button buttonStyle={[styles.bottomButton]} onPress={() => this.handlePayment()} title='Checkout'/>
+            
+            }
+                            </View>
+        )
+    }
+    
+    renderSummaryView(){
+    return(
+        <View 
+        style={{
+        flex: 0.88,
+        alignItems:"center"
+    }}>
+        
+    <View style={[styles.row, styles.summaryContainer]}>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextRight]}>Ordered By : </Text>
+        </View>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextLeft]}>{this.state.name}</Text>
+        </View>
+    </View>
+
+    <View style={[styles.row, styles.summaryContainer]}>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextRight]}>Ordered Ready By : </Text>
+        </View>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextLeft]}>{this.state.selectedDate}</Text>
+        </View>
+    </View>
+
+    <View style={[styles.row, styles.summaryContainer]}>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextRight]}>Collection Method : </Text>
+        </View>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextLeft]}>{this.state.deliveryMethod}</Text>
+        </View>
+    </View>
+
+
+    <View style={[styles.row, styles.summaryContainer]}>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextRight]}>Special Notes : </Text>
+        </View>
+        <View style={[styles.summaryText]}>
+            <Text style={[styles.summaryTextLeft]}>{this.state.notes}</Text>
+        </View>
+    </View>
+
+    {this
+                                        .props
+                                        .cart
+                                        .cart
+                                        .products
+                                        .map((cart, index) => (
+                                            <View style={[styles.row, styles.summaryContainer]}>
+                                            <View style={[styles.summaryText]}>
+                                                <Text style={[styles.summaryTextRight]}>{cart.name} - {cart.variant}</Text>
+                                            </View>
+                                            <View style={[styles.summaryText]}>
+                                                <Text style={[styles.summaryTextLeft]}>{cart.quantity} x {cart.price}</Text>
+                                            </View>
+                                        </View>
+
+                                        ))}
+
+
+</View>
+    )
 }
-                </View>
-                </View>
+
+
+    render() {
+        const {navigate} = this.props.navigation;
+        return (
+            <SafeAreaView>
+                <View style={{
+                        height: height,
+                    }}>
+                  <View style={[styles.row, styles.headerNav]}>
+                            <View style={[styles.headerNavText, this.state.headerActive == "details" ? styles.headerActive:null]}>
+                                <Text>Order Details</Text>
+                            </View>
+                            <View style={[styles.headerNavText, this.state.headerActive == "summary" ? styles.headerActive:null]}>
+                                <Text>Order Summary</Text>
+                            </View>
+                        </View>
+
+                        {this.state.headerActive == "details" ? this.renderDetailsView() : this.renderSummaryView()}
+                    
+                        {this.state.headerActive == "details" ? <Button buttonStyle={[styles.bottomButton]} onPress={() => this.handleErrors()} title='Proceed'/> : this.renderPaymentButton()}
+
+
+</View>
             </SafeAreaView>
         )
     }
 }
 
-const styles = StyleSheet.create({
-    overlay: {
-        height: height,
-        width: width,
-        backgroundColor: 'rgba(0,0,0,0.7)'
-    },
-    container: {
-        width:width*0.9,
-    },
-    textInput: {
-        borderRadius: 2,
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        color: '#000'
-    },
-    textInputDate: {
-        borderRadius: 2,
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        color: '#000',
-        paddingVertical: 11,
-    },
-    textInputContainer: {
-        
-    },
-    labelText: {
-        marginTop: 20,
-        color: '#000'
-    },
-    errorLabel: {
-        marginTop: 20,
-        color: '#FF4B55'
-    },
-    errorInput:{
-        borderRadius: 2,
-        height: 40,
-        borderColor: '#FF4B55',
-        borderWidth: 1,
-        color: '#000'
-    },
-    errorInputDate: {
-        borderRadius: 2,
-        height: 40,
-        borderColor: '#FF4B55',
-        borderWidth: 1,
-        color: '#000',
-        paddingVertical: 11,
-    },
-    loginButton: {
-        backgroundColor: THEME_COLOR,
-        height: 40,
-        marginTop: 20,
-        width: width*0.7
-    }
-})
 
 
 const pickerSelectStyles = StyleSheet.create({
@@ -613,6 +804,6 @@ const pickerSelectStyles = StyleSheet.create({
   });
 
 
-const mapStateToProps = (state) => ({categories: state.categories, business: state.business, products: state.products, cart: state.cart, user:state.auth.user[0],})
+const mapStateToProps = (state) => ({categories: state.categories, business: state.business, products: state.products, cart: state.cart, user:state.auth.user,})
 
 export default connect(mapStateToProps, {getCategories, getBusiness, updateCart, removeCart,placeOrder})(Checkout);

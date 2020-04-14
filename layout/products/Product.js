@@ -15,25 +15,24 @@ import {
     TouchableHighlight,
     Dimensions,
     StyleSheet,
+    TouchableOpacity,
     ImageBackground,
-    Platform
 } from 'react-native';
-import * as theme from '../../themes';
 import {connect} from 'react-redux';
 import {getBusiness} from '../../actions/businessActions';
 import {getCategories} from '../../actions/categoryActions';
 import {CheckBox} from 'react-native-elements'
 import {getProducts, getProduct, setProductLoading} from '../../actions/productActions';
-import Modal, {ModalFooter, ModalButton, ModalContent} from 'react-native-modals';
-import RNPickerSelect, { defaultStyles } from 'react-native-picker-select';
-import Icon from 'react-native-vector-icons/Ionicons';
+import RNPickerSelect, {defaultStyles} from 'react-native-picker-select';
 import {Button} from 'react-native-elements';
 import {addToCart} from '../../actions/cartActions';
-import { THEME_COLOR } from '../../properties';
-import { TouchableOpacity, TextInput } from 'react-native-gesture-handler';
+import {TextInput} from 'react-native-gesture-handler';
 import {FloatingAction} from "react-native-floating-action";
-
+import {Modal as RNModal} from 'react-native';
 const {width, height} = Dimensions.get('window');
+import {Icon as IconButon} from 'react-native-elements';
+import { IP_ADR } from '../../properties';
+var styles = require('./ProductStyles');
 
 class Product extends React.Component {
 
@@ -51,6 +50,8 @@ class Product extends React.Component {
         varName: null,
         checked: false,
         totalAddonsPrice: 0,
+        selectectedItems: [],
+        isShownPicker: false
     }
 
     setModalVisible(visible) {
@@ -67,12 +68,11 @@ class Product extends React.Component {
             .getProduct(this.props.business.business.email, navigation.getParam('productId'))
 
     }
-    
 
-    componentWillUnmount(){
-       this
-       .props
-       .setProductLoading();
+    componentWillUnmount() {
+        this
+            .props
+            .setProductLoading();
     }
 
     setInitProduct() {
@@ -124,13 +124,13 @@ class Product extends React.Component {
         let checkBoxMax = this.state.checkBoxMax;
         let obj = updatedCheckboxesValue.find(x => x.parent === parentAddon && x.child === childAddon.name);
         let index = updatedCheckboxesValue.indexOf(obj);
-        let selectedAddons =  this.state[parentAddon+'selected'];
-        let selectedAddonsPrice =  this.state[parentAddon+'selectedTotal'];
+        let selectedAddons = this.state[parentAddon + 'selected'];
+        let selectedAddonsPrice = this.state[parentAddon + 'selectedTotal'];
         let totalAddonPrice = this.state.totalAddonsPrice;
-        if(selectedAddons === undefined){
+        if (selectedAddons === undefined) {
             selectedAddons = ''
         }
-        if(selectedAddonsPrice === undefined){
+        if (selectedAddonsPrice === undefined) {
             selectedAddonsPrice = 0
         }
 
@@ -140,37 +140,44 @@ class Product extends React.Component {
             if (index > -1) {
                 obj1.current--;
                 updatedCheckboxesValue.splice(index, 1);
-                price = parseInt(this.state.price) - ( parseInt(childAddon.price) *  parseInt(this.state.value))
-                selectedAddons = selectedAddons.replace(childAddon.name,'')
-                totalAddonPrice = parseInt(totalAddonPrice) - parseInt(childAddon.price)
+                price = parseFloat(this.state.price) - (parseFloat(childAddon.price) * parseFloat(this.state.value))
+                selectedAddons = selectedAddons.replace(childAddon.name, '')
+                totalAddonPrice = parseFloat(totalAddonPrice) - parseFloat(childAddon.price)
             } else {
                 obj1.current++;
-                price = parseInt(this.state.price) +( parseInt(childAddon.price) *  parseInt(this.state.value))
-                
+                price = parseFloat(this.state.price) + (parseFloat(childAddon.price) * parseFloat(this.state.value))
+
                 updatedCheckboxesValue = [
                     ...checkboxesValue,
                     value
                 ];
-                selectedAddons = selectedAddons +''+ childAddon.name + ' x(1), ';
-                selectedAddonsPrice = parseInt(selectedAddonsPrice) +  parseInt(childAddon.price)
-                totalAddonPrice = parseInt(totalAddonPrice) +  parseInt(childAddon.price)
+                selectedAddons = selectedAddons + '' + childAddon.name + ' x(1), ';
+                selectedAddonsPrice = parseFloat(selectedAddonsPrice) + parseFloat(childAddon.price)
+                totalAddonPrice = parseFloat(totalAddonPrice) + parseFloat(childAddon.price)
                 this.setState({checked: true})
             }
         } else {
             if (index > -1) {
                 obj1.current--;
                 updatedCheckboxesValue.splice(index, 1);
-                price = parseInt(this.state.price) - ( parseInt(childAddon.price) *  parseInt(this.state.value))
-                selectedAddons = selectedAddons.replace(childAddon.name +' x(1), ' , '')
-                selectedAddonsPrice = parseInt(selectedAddonsPrice) -  parseInt(childAddon.price)
-                totalAddonPrice = parseInt(totalAddonPrice) - parseInt(childAddon.price)
+                price = parseFloat(this.state.price) - (parseFloat(childAddon.price) * parseFloat(this.state.value))
+                selectedAddons = selectedAddons.replace(childAddon.name + ' x(1), ', '')
+                selectedAddonsPrice = parseFloat(selectedAddonsPrice) - parseFloat(childAddon.price)
+                totalAddonPrice = parseFloat(totalAddonPrice) - parseFloat(childAddon.price)
 
             }
             event.target.checked = false;
             event.stopPropagation();
         }
 
-        this.setState({checkboxesValue: updatedCheckboxesValue, price: price, checkBoxMax: checkBoxMax,[parentAddon+'selected']: selectedAddons, [parentAddon+'selectedTotal']: selectedAddonsPrice, totalAddonsPrice: totalAddonPrice})
+        this.setState({
+            checkboxesValue: updatedCheckboxesValue,
+            price: price,
+            checkBoxMax: checkBoxMax,
+            [parentAddon + 'selected']: selectedAddons,
+            [parentAddon + 'selectedTotal']: selectedAddonsPrice,
+            totalAddonsPrice: totalAddonPrice
+        })
         console.log(this.state)
     }
 
@@ -179,11 +186,62 @@ class Product extends React.Component {
         let addons = this.props.products.product.addons
         for (let i = 0; i < addons.length; i++) {
             let addonsGroups = [];
+            addonsRender.push(
+                <View
+                    style={{
+                    marginTop: 10,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#e4e6e8',
+                    paddingLeft:10,
+                    paddingRight:10,
+                    paddingTops:10,
+                }}>
+                    <Text>
+                        Choose a {addons[i].name}
+                    </Text>
+                    <View style={[styles.selectedVariants]}>
+                        <Text>
+                            {this.state[addons[i].name + 'selected']}</Text>
+                        <Text>
+                            {this.state[addons[i].name + 'selectedTotal'] === undefined || this.state[addons[i].name + 'selectedTotal'] === 0
+                                ? null
+                                : 'Price : ' + this.state[addons[i].name + 'selectedTotal']}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.addonButton]}
+                        onPress={() => {
+                        this.setState({
+                            ['addon-modal' + i]: true
+                        });
+                    }}>
+                        <Text
+                            style={{
+                            padding: 7,
+                            zIndex: 999,
+                            color:'white'
+                        }}>Choose</Text>
+                    </TouchableOpacity>
+
+                    
+
+                </View>
+
+            );
+        }
+        return addonsRender;
+    }
+
+    renderAddonModals() {
+        let addonsRender = [];
+        let addons = this.props.products.product.addons
+        for (let i = 0; i < addons.length; i++) {
+            let addonsGroups = [];
             for (let z = 0; z < addons[i].addons.length; z++) {
                 let parentAddon = addons[i].name
                 let childAddon = addons[i].addons[z]
                 addonsGroups.push(<CheckBox
-                    title={`${addons[i].addons[z].name} ${addons[i].addons[z].price} `}
+                    title={`${addons[i].addons[z].name} ${(Math.round(addons[i].addons[z].price * 100) / 100).toFixed(2)} `}
                     onPress={(e) => {
                     this.addCheckboxesValue(e, parentAddon, childAddon)
                 }}
@@ -193,46 +251,80 @@ class Product extends React.Component {
                     .find(o => o.child === addons[i].addons[z].name && o.parent === addons[i].name)}/>)
             }
             addonsRender.push(
-                <View style={{marginTop:10,borderBottomWidth:1, borderBottomColor:'#e4e6e8', paddingBottom:10}}>
-                         <Text> Choose a {addons[i].name}
-                    </Text>
-                    <TouchableOpacity style={[styles.addonButton]} onPress={() => {
-                            this.setState({['addon-modal'+i]: true});
+                <RNModal
+                borderWidth={0}
+                            animationType='fade'
+                    transparent={true}
+                    visible={this.state['addon-modal' + i] == undefined
+                    ? false
+                    : this.state['addon-modal' + i]}
+                    onTouchOutside={() => {
+                    this.setState({
+                        ['addon-modal' + i]: false
+                    });
+                }}>
+                    <TouchableHighlight
+                              
+                              style={{
+                              borderWidth: 0,
+                              backgroundColor: 'rgba(0,0,0,0.5)',
+                              flex: 1,
+                              flexDirection: 'column',
+                              justifyContent: 'center',
+                              alignItems: 'center'
+                          }}>
+                    <View
+                        style={{
+                        width: width,
+                        flex: 1,
+                        flexDirection: 'column',
+                        textAlign: 'center',
+                        justifyContent: 'center'
+                    }}>
+
+                        <View
+                            style={{
+                            backgroundColor: 'white',
+                            width: 300,
+                            marginLeft:width*0.13
                         }}>
-                            <Text style={{padding:7}}>Choose</Text>
-                        </TouchableOpacity>
 
-<View  style={[styles.selectedVariants]}>
-<Text> {this.state[addons[i].name+'selected']}</Text>
-                        <Text> {this.state[addons[i].name+'selectedTotal'] === undefined || this.state[addons[i].name+'selectedTotal'] === 0 ? null : 'Price : ' + this.state[addons[i].name+'selectedTotal']}  </Text>
-</View>
-                       
+                            <Text style={[{padding:10}]}>{addons[i].name}
+                            </Text>
 
+                            <Text style={[{padding:10}]}>Max allowed addons : {addons[i].maximimCount}</Text>
+                            {addonsGroups}
 
-<Modal
-                            visible={this.state['addon-modal'+i]}
-                            onTouchOutside={() => {
-                            this.setState({['addon-modal'+i]: false});
-                        }}>
-                    <ModalContent style={{textAlign:'center',justifyContent:'center'}}>
-                    <Text>{addons[i].name}
-                    </Text>
+                            <TouchableOpacity
+                                style={[
+                                styles.addonButton, {
+                                    justifyContent: "center",
+                                    alignContent: "center",
+                                    margin:10
+                                }
+                            ]}
+                                onPress={() => {
+                                this.setState({
+                                    ['addon-modal' + i]: false
+                                });
+                            }}>
+                                <Text
+                                    style={{
+                                    padding: 7,
+                                    color:'white'
+                                }}>Done</Text>
+                            </TouchableOpacity>
 
-                    <Text>Max allowed addons : {addons[i].maximimCount}</Text>
-                    {addonsGroups}
+                        </View>
+                    </View>
+                    </TouchableHighlight>
+                </RNModal>
 
-                    <TouchableOpacity style={[styles.addonButton,{justifyContent:"center",alignContent:"center"}]} onPress={() => {
-                            this.setState({['addon-modal'+i]: false});
-                        }}>
-                            <Text style={{padding:7}}>Done</Text>
-                        </TouchableOpacity>
-                    </ModalContent>
-                </Modal>
-                </View>
-                
             );
         }
+        console.log(addonsRender.length)
         return addonsRender;
+
     }
 
     getVariant() {
@@ -247,20 +339,20 @@ class Product extends React.Component {
     }
 
     changeVariant(value, index) {
-        var price = parseInt(this.state.price)
-        var varPrice = parseInt(this.state.varPrice);
+        var price = parseFloat(this.state.price)
+        var varPrice = parseFloat(this.state.varPrice);
         var varName = this.props.products.product.variant.variants[index].name
-        price = parseInt(price) - (parseInt(varPrice) * this.state.value);
-        price = parseInt(price) + (parseInt(value) * this.state.value);
-        this.setState({variant: varName, varPrice: this.props.products.product.variant.variants[index].price,price:price})
+        price = parseFloat(price) - (parseFloat(varPrice) * this.state.value);
+        price = parseFloat(price) + (parseFloat(value) * this.state.value);
+        this.setState({variant: varName, varPrice: this.props.products.product.variant.variants[index].price, price: price})
     }
 
     incrementCount = () => {
         let price = 0;
         if (this.state.varPrice === 0) {
-            price = parseInt(this.state.price) + parseInt(this.state.initPrice)
+            price = parseFloat(this.state.price) + parseFloat(this.state.initPrice)
         } else {
-            price = parseInt(this.state.price) + parseInt(this.state.varPrice)
+            price = parseFloat(this.state.price) + parseFloat(this.state.varPrice)
         }
         price = price + this.state.totalAddonsPrice;
         this.setState({
@@ -273,9 +365,9 @@ class Product extends React.Component {
         if (this.state.value > 1) {
             let price = 0;
             if (this.state.varPrice === 0) {
-                price = parseInt(this.state.price) - parseInt(this.state.initPrice)
+                price = parseFloat(this.state.price) - parseFloat(this.state.initPrice)
             } else {
-                price = parseInt(this.state.price) - parseInt(this.state.varPrice)
+                price = parseFloat(this.state.price) - parseFloat(this.state.varPrice)
             }
             price = price - this.state.totalAddonsPrice;
             this.setState({
@@ -316,13 +408,17 @@ class Product extends React.Component {
             for (let i = 0; i < checkBoxMax.length; i++) {
                 checkBoxMax[i].current = 0;
             }
-            this.setState({checkBoxMax: checkBoxMax, modalVisible:false})
+            this.setState({checkBoxMax: checkBoxMax, modalVisible: false})
         }
+
+       
     }
 
     render() {
-
+        const {navigate} = this.props.navigation;
+        let imagePRD = '';
         if (this.props.products.product != null) {
+            imagePRD = this.props.products.product.image.replace('api.appezite.com',IP_ADR)
             if (this.state.checkBoxMax === undefined) {
                 var addons = this.props.products.product.addons;
                 let max = [];
@@ -348,111 +444,180 @@ class Product extends React.Component {
                     : <View>
                         {this.setInitProduct()}
                         <ScrollView>
-                            <View style={{height:height}} >
-                            <ImageBackground
+                            <View
+                                style={{
+                                height: height
+                            }}>
+                                <ImageBackground
                                     style={{
                                     width: width,
-                                    height: width*0.5
+                                    height: width *0.5
                                 }}
                                     source={{
-                                    uri: this.props.products.product.image
+                                    uri: imagePRD
                                 }}>
 
-                                <Text style={[styles.productName]}>{this.props.products.product.name}</Text>
-                                <TouchableHighlight
-                                 style={[styles.addToCart]}
-                    onPress={() => {
-                    this.setModalVisible(true);
-                }}>
-                    <Text>Hi</Text>
-                </TouchableHighlight>
+                                    <Text style={[styles.productName]}>{this.props.products.product.name}</Text>
+                                    <TouchableHighlight
+                                        style={[styles.addToCart]}
+                                        onPress={() => {
+                                        this.setModalVisible(true);
+                                    }}>
+                                        <IconButon
+                                                size={35}
+                                                name='add'
+                                                type='material'
+                                                color="#fff"
+                                        />
+                                    </TouchableHighlight>
                                 </ImageBackground>
 
                                 <Text>{this.props.products.product.description}</Text>
-                               
+
                             </View>
                         </ScrollView>
 
-                        <Modal
-                            visible={this.state.modalVisible}
-                            onTouchOutside={() => {
-                            this.setState({modalVisible: false});
-                        }}>
-                            <ModalContent style={[styles.modal]}>
+                        <RNModal
+                            borderWidth={0}
+                            animationType='fade'
+                            transparent={true}
+                            visible={this.state.modalVisible}>
 
-                            <View  style={[styles.flex, styles.row,styles.modalProductName]}>
-                                <View style={[styles.flex, styles.row,styles.buttonText]} >
-                                    <Text>{this.props.products.product.name}</Text>
-                                </View>
-                            </View>
-
-                            <View  style={[styles.flex, styles.column, styles.optionContainer]}>
+                            {this.props.products.product.addons.length > 0
+                                ? this.renderAddonModals()
+                                : null}
+                            <TouchableHighlight
                               
-                                {this.props.products.product.variant.variants.length > 0
+                                style={{
+                                borderWidth: 0,
+                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                flex: 1,
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}>
+                                <View
+                                    style={{
+                                    backgroundColor: 'white',
+                                    width: width *0.8,
+                                    height: width *1.4
+                                }}>
 
-                                    ? 
-                                    <View style={{borderBottomWidth:1, borderBottomColor:'#e4e6e8', paddingBottom:10}}>
-                                        <Text>Choose a {this.props.products.product.variant.name}</Text>
-                                    <RNPickerSelect
-            placeholder={this.getVariant()}
-            items={this.getVariants()}
-            onValueChange={(value, index) => this.changeVariant(value, index)}
-            style={{
-              ...pickerSelectStyles
-            }}
-            useNativeAndroidPickerStyle={false}
-          
-          />
+                                    <View style={[styles.flex, styles.row, styles.modalProductName]}>
+                                        <View style={[styles.flex, styles.row, styles.buttonText]}>
+                                            <Text style={{color:'white'}}>{this.props.products.product.name}</Text>
+                                        </View>
+                                        <TouchableOpacity style={{padding:10,zIndex:9999}} onPress={() => this.setState({modalVisible:false})}>
+                                        <IconButon
+                  name='close'
+                  type='font-awesome'
+                  size={20}
+                  color={'white'}
+                />
+                                        </TouchableOpacity>
                                     </View>
-                                    : null}
 
-                                {this.props.products.product.addons.length > 0
-                                    ? this.renderAddons()
-                                    : null}
+                                    <View style={[styles.flex, styles.column, styles.optionContainer]}>
+                                        {
+                                            this.state.msg == null ?
+                                            null :
+                                            <Text style={[styles.errorMsg]}>{this.state.msg}</Text>
+                                        }
 
-                            </View>
-                                
-                                <View style={[styles.flex, styles.row,styles.itemPriceContainer]}>
-                                    <Text style={{marginLeft:10}}>Item Price</Text>
-                                    {
-                                        this.state.varPrice === 0 ?
-                                        <Text  style={{marginRight:10}}>{this.state.initPrice}</Text>
-                                        :
-                                        <Text  style={{marginRight:10}}>{this.state.varPrice}</Text>
-                                    }
-                                </View>
+                                        {this.props.products.product.variant.variants.length > 0
 
-                                <View style={[styles.flex, styles.row,styles.quantityContainer]}>
-                                    <Text style={{marginLeft:10}}>Quantity</Text>
-                                    <View style={[styles.counterContainer,styles.row]}>
-                                        <Button  buttonStyle={[styles.counter]} onPress={() => this.decrementCount()} title="-"/>
-                                        <Text>{this.state.value}</Text>
-                                        <Button  buttonStyle={[styles.counter]} onPress={() => this.incrementCount()} title="+"/>
+                                            ? <View
+                                                    style={{
+                                                    borderBottomWidth: 1,
+                                                    borderBottomColor: '#e4e6e8',
+                                                    padding: 10
+                                                    
+                                                }}>
+                                                    <Text>Choose a {this.props.products.product.variant.name}</Text>
+                                                    <RNPickerSelect
+                                                        placeholder={this.getVariant()}
+                                                        items={this.getVariants()}
+                                                        onValueChange={(value, index) => this.changeVariant(value, index)}
+                                                        style={{
+                                                        ...pickerSelectStyles
+                                                    }}
+                                                        useNativeAndroidPickerStyle={false}/>
+                                                </View>
+                                            : null}
+
+                                        {this.props.products.product.addons.length > 0
+                                            ? this.renderAddons()
+                                            : null}
+
                                     </View>
-                                </View>
 
-
-                                <View style={[styles.flex, styles.row,styles.subTotalContainer]}>
-                                    <Text style={{marginLeft:10}}>Sub-total</Text>
-                                    <Text  style={{marginRight:10}}>{this.state.price}</Text>
-                                </View>
-                              
-                              <View  style={[styles.flex, styles.row,styles.modalAddtoCart]}>
-                              <TouchableOpacity style={[styles.flex, styles.row,styles.buttonText]}  onPress={() => this.addToCart()} >
-                                    <Text> Add to Cart</Text>
-                                </TouchableOpacity>
-                              </View>
-                               
-                            </ModalContent>
-                        </Modal>
-                    </View>
+                                    <View style={[styles.flex, styles.row, styles.itemPriceContainer]}>
+                                        <Text
+                                            style={{
+                                            marginLeft: 10
+                                        }}>Item Price</Text>
+                                        {this.state.varPrice === 0
+                                            ? <Text
+                                                    style={{
+                                                    marginRight: 10
+                                                }}>{(Math.round(this.state.initPrice * 100) / 100).toFixed(2)}</Text>
+                                            : <Text
+                                                style={{
+                                                marginRight: 10
+                                            }}>{(Math.round(this.state.varPrice * 100) / 100).toFixed(2)}</Text>
 }
+                                    </View>
 
-               
-{this.props.cart.cart != null
-                    ? <View >
-                            <FloatingAction onPressMain={() => navigate('Cart')} iconHeight={25} iconWidth={25} animated={false} floatingIcon={require("../../resources/003-shopping-cart.png")}/>
-                        </View>
+                                    <View style={[styles.flex, styles.row, styles.quantityContainer]}>
+                                        <Text
+                                            style={{
+                                            marginLeft: 10
+                                        }}>Quantity</Text>
+                                        <View style={[styles.counterContainer, styles.row]}>
+                                            <Button
+                                                buttonStyle={[styles.counter]}
+                                                onPress={() => this.decrementCount()}
+                                                title="-"/>
+                                            <Text>{this.state.value}</Text>
+                                            <Button
+                                                buttonStyle={[styles.counter]}
+                                                onPress={() => this.incrementCount()}
+                                                title="+"/>
+                                        </View>
+                                    </View>
+
+                                    <View style={[styles.flex, styles.row, styles.subTotalContainer]}>
+                                        <Text
+                                            style={{
+                                            marginLeft: 10
+                                        }}>Sub-total</Text>
+                                        <Text
+                                            style={{
+                                            marginRight: 10
+                                        }}>{(Math.round(this.state.price * 100) / 100).toFixed(2)}</Text>
+                                    </View>
+
+                                    <View style={[styles.flex, styles.row, styles.modalAddtoCart]}>
+                                        <Button
+                                            onPress={() => this.addToCart()}
+                                            buttonStyle={[styles.buttonText]}  title="Add to cart"/>
+                                    </View>
+
+                                </View>
+
+                            </TouchableHighlight>
+
+                        </RNModal>
+
+                    </View>}
+
+                {this.props.cart.cart != null
+                    ? <FloatingAction
+                            onPressMain={() => navigate('Cart')}
+                            iconHeight={25}
+                            iconWidth={25}
+                            animated={false}
+                            floatingIcon={require("../../resources/003-shopping-cart.png")}/>
                     : null
 }
 
@@ -461,126 +626,6 @@ class Product extends React.Component {
     }
 }
 
-
-const styles = StyleSheet.create({
-    flex: {
-        flex: 1,
-    },
-    column: {
-        flexDirection: 'column'
-    },
-    row: {
-        flexDirection: 'row'
-    },
-    addToCart: {
-        height: 60,
-        width: 60,
-        borderRadius:100,
-        textAlign:"center",
-        backgroundColor: THEME_COLOR,
-        position:"absolute",
-        bottom:-25,
-        zIndex:999,
-        right:10
-    },
-    productName:{
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        width:width,
-        padding:10,
-        position:"absolute",
-        bottom:0,
-        color:'white'
-    },
-    modal:{
-        width:width*0.8,
-        height:width*1.4
-    },
-    modalProductName:{
-        justifyContent:'space-between',
-        position:"absolute",
-        top:0,
-        width:width *0.8,
-        height:40,
-        backgroundColor:THEME_COLOR,
-    },
-    modalAddtoCart:{
-        justifyContent:'space-between',
-        position:"absolute",
-        bottom:0,
-        width:width *0.8,
-        height:40,
-        backgroundColor:THEME_COLOR,
-    },
-    buttonText:{
-        width:width*0.8,
-        justifyContent:'center',
-        alignContent:'center',
-        alignItems: 'center',
-        textAlign:"center"
-    },
-    quantityContainer:{
-        alignContent:'center',
-        alignItems: 'center',
-        justifyContent:'space-between',
-        bottom:70,
-        position: 'absolute',
-        width:width *0.8,
-        height:30,
-        backgroundColor:'rgba(0,0,0,0.5)'
-    },
-    subTotalContainer:{
-        alignContent:'center',
-        alignItems: 'center',
-        justifyContent:'space-between',
-        bottom:40,
-        position: 'absolute',
-        width:width *0.8,
-        height:30,
-        backgroundColor:'rgba(0,0,0,0.5)'
-    },
-    itemPriceContainer:{
-        alignContent:'center',
-        alignItems: 'center',
-        justifyContent:'space-between',
-        bottom:100,
-        position: 'absolute',
-        width:width *0.8,
-        height:30,
-        backgroundColor:'rgba(0,0,0,0.5)'
-    },
-    counterContainer: {
-        justifyContent:'center',
-        alignContent:'center',
-        alignItems: 'center',
-    },
-    counter:{
-        height:20,
-        width:20,
-        marginLeft:10,
-        marginRight:10,
-        borderRadius:20,
-        display:"flex",
-    },
-    addonButton:{
-        width:width*0.17,
-        borderWidth:2,
-        borderRadius:10,
-        borderColor:THEME_COLOR
-    },
-    optionContainer:{
-         marginTop:20,
-         borderWidth:1,
-         borderBottomColor:'#e4e6e8',
-         borderTopColor:'white',
-         borderRightColor:'white',
-         borderLeftColor:'white',
-    },
-    selectedVariants:{
-        alignContent:'flex-start',
-        alignItems: 'flex-start',
-        justifyContent:'space-between',
-    } 
-})
 
 const pickerSelectStyles = StyleSheet.create({
     inputIOS: {
@@ -606,7 +651,8 @@ const pickerSelectStyles = StyleSheet.create({
 
   });
 
-const mapStateToProps = (state) => ({categories: state.categories, business: state.business, products: state.products,cart:state.cart});
+
+const mapStateToProps = (state) => ({categories: state.categories, business: state.business, products: state.products, cart: state.cart});
 
 export default connect(mapStateToProps, {
     getCategories,

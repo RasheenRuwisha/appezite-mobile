@@ -28,6 +28,7 @@ import {getBusiness} from '../../actions/businessActions';
 import {getCategories} from '../../actions/categoryActions';
 import {Card, ListItem, Button, Icon} from 'react-native-elements'
 import {FloatingAction} from "react-native-floating-action";
+import { IP_ADR } from '../../properties';
 
 const {width, height} = Dimensions.get('window');
 
@@ -36,6 +37,7 @@ class Categories extends React.Component {
     // static navigationOptions = ({navigation}) => {     return {header: (    <View
     // style={[styles.flex, styles.row, styles.header]}></View>         ),
     // headerTransparent: true} }
+
 
     state = {
         business: undefined,
@@ -60,6 +62,7 @@ class Categories extends React.Component {
                                     .categories
                                     .categories
                                     .map((u, i) => {
+                                        u.image =  u.image.replace('api.appezite.com',IP_ADR);
                                         return (
                                             <TouchableOpacity onPress={() => navigate('Products', {catId: u.categoryId})}>
                                                 <Card
@@ -80,9 +83,8 @@ class Categories extends React.Component {
                     </View>
 }
                 {this.props.cart.cart != null
-                    ? <View >
-                            <FloatingAction onPressMain={() => navigate('Cart')} iconHeight={25} iconWidth={25} animated={false} floatingIcon={require("../../resources/003-shopping-cart.png")}/>
-                        </View>
+                    ? 
+                            <FloatingAction style={{zIndex:999}} onPressMain={() => navigate('Cart')} iconHeight={25} iconWidth={25} animated={false} floatingIcon={require("../../resources/003-shopping-cart.png")}/>
                     : null
 }
 

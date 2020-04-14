@@ -66,7 +66,7 @@ class Orders extends React.Component {
                         <Text>{orders[i].products[z].name}
                             - {orders[i].products[z].variant === null
                                 ? null
-                                : orders[i].products[z].variant}</Text>
+                            : orders[i].products[z].variant}  x{orders[i].products[z].quantity}</Text>
                     )
                     for (let x = 0; x < orders[i].products[z].addons.length; x++) {
                         orderProducts.push(

@@ -29,7 +29,8 @@ import {getCategories} from '../../actions/categoryActions';
 import {Card, ListItem, Button, Icon} from 'react-native-elements'
 import {FloatingAction} from "react-native-floating-action";
 import {removeCart, updateCart} from '../../actions/cartActions';
-import {THEME_COLOR} from '../../properties';
+import {THEME_COLOR, IP_ADR} from '../../properties';
+import styles from './CartStyles'
 
 const {width, height} = Dimensions.get('window');
 
@@ -82,7 +83,7 @@ class Cart extends React.Component {
         var price = 0;
 
         for (var i = 0; i < this.props.cart.cart.products.length; i++) {
-            (price) = parseInt(price) + parseInt(this.props.cart.cart.products[i].price);
+            (price) = parseFloat(price) + parseFloat(this.props.cart.cart.products[i].price);
         }
         return (
             <Text>{price}</Text>
@@ -93,7 +94,7 @@ class Cart extends React.Component {
         var totalItems = 0;
 
         for (var i = 0; i < this.props.cart.cart.products.length; i++) {
-            totalItems = parseInt(totalItems) + parseInt(this.props.cart.cart.products[i].quantity)
+            totalItems = parseFloat(totalItems) + parseFloat(this.props.cart.cart.products[i].quantity)
         }
         return (
             <Text>{totalItems}</Text>
@@ -126,6 +127,8 @@ class Cart extends React.Component {
                                                 .cart
                                                 .products
                                                 .map((cart, i) => {
+                                                    cart.image =  cart.image.replace('api.appezite.com',IP_ADR);
+
                                                     return (
                                                         <TouchableOpacity>
                                                             <View
@@ -216,44 +219,6 @@ class Cart extends React.Component {
         )
     }
 }
-
-const styles = StyleSheet.create({
-    flex: {
-        flex: 1
-    },
-    column: {
-        flexDirection: 'column'
-    },
-    row: {
-        flexDirection: 'row'
-    },
-    namePriceContainer: {
-        marginLeft: 5,
-        marginRight: 5,
-        justifyContent: 'space-between',
-        alignContent: 'space-between'
-    },
-    nameText: {
-        color: '#000',
-        fontSize: 15
-    },
-    variantText: {
-        color: 'gray',
-        fontSize: 13,
-        marginLeft: 5
-    },
-    iconStyles: {
-        fontSize: 10
-    },
-    checkoutButton: {
-        justifyContent: 'space-between',
-        position: "absolute",
-        bottom: 0,
-        width: width,
-        height: 50,
-        backgroundColor: THEME_COLOR
-    }
-})
 
 const mapStateToProps = (state) => ({categories: state.categories, business: state.business, products: state.products, cart: state.cart})
 

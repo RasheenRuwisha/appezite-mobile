@@ -13,9 +13,11 @@ import {
     View,
     Image,
     Dimensions,
-    StyleSheet,
+    KeyboardAvoidingView,
     ImageBackground,
-    Text
+    Text,
+    ActivityIndicator,
+    TouchableHighlight
 } from 'react-native';
 import {connect} from 'react-redux';
 import RNPickerSelect from 'react-native-picker-select';
@@ -25,6 +27,8 @@ import {STARTER_URL, LOGO_URL, THEME_COLOR} from '../../properties'
 const {width, height} = Dimensions.get('window');
 import {Button} from 'react-native-elements';
 import { StackActions, NavigationActions } from 'react-navigation';
+import styles from './LoginStyles';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 
 class Login extends React.Component {
 
@@ -32,16 +36,17 @@ class Login extends React.Component {
         modal: false,
         email: '',
         password: '',
-        msg: null
+        msg: null,
+        registering:false,
     }
 
     componentDidUpdate(previousProps) {
         const {error, isAuthenticated} = this.props;
         if (error != previousProps.error) {
             if (error.id === 'LOGIN_FAIL') {
-                this.setState({msg: error.msg.msg})
+                this.setState({msg: error.msg.msg,registering:false})
             } else {
-                this.setState({msg: null})
+                this.setState({msg: null,registering:false})
             }
         }
     }
@@ -50,9 +55,9 @@ class Login extends React.Component {
         const {error, isAuthenticated} = this.props;
         if (error != previousProps.error) {
             if (error.id === 'LOGIN_FAIL') {
-                this.setState({msg: error.msg.msg})
+                this.setState({msg: error.msg.msg,registering:false})
             } else {
-                this.setState({msg: null})
+                this.setState({msg: null,registering:false})
             }
         }
 
@@ -82,7 +87,7 @@ class Login extends React.Component {
             email,
             password
         }
-
+        this.setState({registering:true})
         this
             .props
             .login(newUser);
@@ -106,7 +111,7 @@ class Login extends React.Component {
                 <View style={[styles.overlay]}>
                     <SafeAreaView>
 
-                        <View>
+                        <KeyboardAwareScrollView enableOnAndroid={true} extraHeight={130} extraScrollHeight={130}>
                             <View style={[styles.container]}>
                                 <Image
                                     style={{
@@ -119,6 +124,8 @@ class Login extends React.Component {
                                 }}/>
 
                                 <View style={[styles.textInputContainer]}>
+                            <Text style={[styles.errorText]}>{this.state.msg}</Text>
+
                                     <Text style={[styles.labelText]}>Email</Text>
                                     <TextInput
                                         style={[styles.textInput]}
@@ -139,10 +146,18 @@ class Login extends React.Component {
                                         value={this.state.password}/>
 
                                     <View style={[styles.container]}>
-                                        <Button
-                                            onPress={() => this.loginUser()}
-                                            buttonStyle={[styles.loginButton]}
-                                            title="Login"/>
+
+                                    {this.state.registering ?
+ <TouchableHighlight  style={[styles.loginButton]}>
+ <ActivityIndicator style={{padding:10}} size="small" color="#fff" />
+ </TouchableHighlight>
+ :
+ <Button
+ onPress={() => this.loginUser()}
+ buttonStyle={[styles.loginButton]}
+ title="Login"/>
+}
+
 
                                         <Text style={[styles.labelText]}>Don't have an account?
                                             <Text
@@ -158,46 +173,13 @@ class Login extends React.Component {
                                 </View>
                             </View>
 
-                        </View>
+                        </KeyboardAwareScrollView>
                     </SafeAreaView>
                 </View>
             </ImageBackground>
         )
     }
 }
-
-const styles = StyleSheet.create({
-    overlay: {
-        height: height,
-        width: width,
-        backgroundColor: 'rgba(0,0,0,0.7)'
-    },
-    container: {
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    textInput: {
-        width: width*0.7,
-        borderRadius: 2,
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        color: '#fff'
-    },
-    textInputContainer: {
-        marginTop: width*0.4
-    },
-    labelText: {
-        marginTop: 20,
-        color: '#fff'
-    },
-    loginButton: {
-        backgroundColor: THEME_COLOR,
-        height: 40,
-        marginTop: 20,
-        width: width*0.7
-    }
-})
 
 const mapStateToProps = state => ({isAuthenticated: state.auth.isAuthenticated, error: state.error, categories: state.categories, business: state.business, products: state.products});
 

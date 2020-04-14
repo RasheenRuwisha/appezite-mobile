@@ -1,6 +1,1 @@
-export const BUSINESS_ID = 'BIZ_iUgjfbeW9X';
-export const STARTER_URL = 'https://i.imgur.com/6f3T4S2.jpg';
-export const LOGO_URL = 'https://i.imgur.com/TmEnaoI.png';
-export const BASE_URL = 'http://localhost:8082/';
-export const THEME_COLOR = '#f0b81f';
-export const BUSINESS_NAME = 'Pasta Mania'
+export const BUSINESS_ID = "BIZ_elXIUtHqgH";export const STARTER_URL = "http://192.168.8.101:8080/ipfs/QmQ8JNJRkZq6L8kM4H9JCntYzZqjh3oKrt7tnT7z2ZnyCZ";export const LOGO_URL = "http://192.168.8.101:8080/ipfs/QmVZReL2VjTmdBh2soDcyiqfPwiNBYYfVqmbDtRp5PYLHu";export const BASE_URL = "http://192.168.8.101:5005/client";export const THEME_COLOR = "#185157";export const BUSINESS_NAME = "jeep";export const IP_ADR = "192.168.8.101"

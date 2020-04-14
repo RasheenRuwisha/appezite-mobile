@@ -1,9 +1,10 @@
 import { GET_PRODUCTS, ITEMS_LOADING, GET_PRODUCT, PRODUCT_LOADING } from './types';
 import axios from 'axios';
+import { BUSINESS_ID, BASE_URL } from '../properties' 
 
 export const getProducts = (businessId, email, catid) => dispatch =>{
     dispatch(setItemsLoading);
-    axios.get(`http://localhost:8082/user/queryAllCategoryProducts?businessId=${businessId}&email=${email}&categoryId=${catid}`)
+    axios.get(`${BASE_URL}/queryAllCategoryProducts?businessId=${businessId}&email=${email}&categoryId=${catid}`)
     .then(
         res => dispatch({
             type: GET_PRODUCTS,
@@ -15,7 +16,7 @@ export const getProducts = (businessId, email, catid) => dispatch =>{
 
 export const getProduct = (email, catid) => dispatch =>{
     dispatch(setItemsLoading);
-    axios.get(`http://localhost:8082/user/queryProduct?email=${email}&productId=${catid}`)
+    axios.get(`${BASE_URL}/queryProduct?email=${email}&productId=${catid}`)
     .then(
         res => dispatch({
             type: GET_PRODUCT,

@@ -24,6 +24,7 @@ import {clearErrors} from '../../actions/errorActions';
 import {STARTER_URL, LOGO_URL, THEME_COLOR,BUSINESS_NAME} from '../../properties'
 const {width, height} = Dimensions.get('window');
 import {Button} from 'react-native-elements';
+import styles from './HomeStyles';
 
 class Home extends React.Component {
 
@@ -120,55 +121,6 @@ class Home extends React.Component {
     }
 }
 
-const styles = StyleSheet.create({
-    overlay: {
-        height: height,
-        width: width,
-        backgroundColor: 'rgba(0,0,0,0.7)'
-    },
-    container: {
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    textInput: {
-        width: width*0.7,
-        borderRadius: 2,
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        color:'#fff'
-    },
-    textInputContainer: {
-        marginTop: width*0.5
-    },
-    labelText: {
-        marginTop: 20,
-        color: '#fff'
-    },
-    loginButton: {
-        backgroundColor: THEME_COLOR,
-        height: 40,
-        marginTop: 20,
-        width: width*0.7,
-    },
-    guestButton: {
-        backgroundColor: 'rgba(0,0,0,0)',
-        borderColor: THEME_COLOR,
-        height: 40,
-        marginTop: 20,
-        width: width*0.7,
-        borderWidth:2
-    },
-    welcomeContainer: {
-        marginTop:40,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    welcomeText: {
-        color: '#fff',
-        fontSize:25
-    },
-})
 
 const mapStateToProps = state => ({isAuthenticated: state.auth.isAuthenticated, error: state.error, categories: state.categories, business: state.business, products: state.products});
 

@@ -13,9 +13,11 @@ import {
     View,
     Image,
     Dimensions,
-    StyleSheet,
+    KeyboardAvoidingView,
     ImageBackground,
-    Text
+    Text,
+    ActivityIndicator,
+    TouchableHighlight
 } from 'react-native';
 import {connect} from 'react-redux';
 import RNPickerSelect from 'react-native-picker-select';
@@ -24,7 +26,10 @@ import {clearErrors} from '../../actions/errorActions';
 import {STARTER_URL, LOGO_URL, THEME_COLOR, BUSINESS_ID} from '../../properties'
 const {width, height} = Dimensions.get('window');
 import {Button} from 'react-native-elements';
-import { StackActions, NavigationActions } from 'react-navigation';
+import {StackActions, NavigationActions} from 'react-navigation';
+import ButtonSpinner from 'react-native-button-spinner';
+import styles from './RegisterStyles';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 
 class Register extends React.Component {
 
@@ -32,19 +37,22 @@ class Register extends React.Component {
         modal: false,
         email: '',
         password: '',
-        msg: null
+        name: '',
+        phone:'',
+        msg: null,
+        registering: false
     }
 
     componentDidUpdate(previousProps) {
         const {error, isAuthenticated} = this.props;
         if (error != previousProps.error) {
-            if (error.id === 'LOGIN_FAIL') {
-                this.setState({msg: error.msg.msg})
+            if (error.id === 'REGISTER_FAIL') {
+                this.setState({msg: error.msg.msg, registering:false})
             } else {
                 this.setState({msg: null})
             }
         }
-
+        
         if (isAuthenticated) {
             const resetAction = StackActions.reset({
                 index: 0,
@@ -53,9 +61,15 @@ class Register extends React.Component {
               this.props.navigation.dispatch(resetAction);
         }
     }
+    
     onEmailChange = (text) => {
         this.setState({email: text});
     };
+
+    onPhoneChange = (text) => {
+        this.setState({phone: text});
+    };
+
 
     onPasswordChange = (text) => {
         this.setState({password: text});
@@ -65,19 +79,25 @@ class Register extends React.Component {
         this.setState({name: text});
     };
 
-    registerUser(){
-        const { email, password, name } = this.state
+    registerUser() {
+        const {email, password, name, phone} = this.state
         const businessId = BUSINESS_ID
-    
+
         const newUser = {
             businessId,
             email,
+            password,
             name,
-            password
+            phone
         }
-        this.props.register(newUser);
+        this.setState({registering:true})
+
+
+        this
+            .props
+            .register(newUser);
     }
-    
+
     render() {
         const {navigate} = this.props.navigation;
 
@@ -96,20 +116,21 @@ class Register extends React.Component {
                 <View style={[styles.overlay]}>
                     <SafeAreaView>
 
-                        <View>
+                    <KeyboardAwareScrollView enableOnAndroid={true} extraHeight={130} extraScrollHeight={130}>
                             <View style={[styles.container]}>
                                 <Image
                                     style={{
-                                    marginTop: width*0.2,
-                                    width: width*0.4,
-                                    height: width*0.4
+                                    marginTop: width *0.2,
+                                    width: width *0.4,
+                                    height: width *0.4
                                 }}
                                     source={{
                                     uri: LOGO_URL
                                 }}/>
 
                                 <View style={[styles.textInputContainer]}>
-                                
+
+                            <Text style={[styles.errorText]}>{this.state.msg}</Text>
                                     <Text style={[styles.labelText]}>Name</Text>
                                     <TextInput
                                         style={[styles.textInput]}
@@ -118,14 +139,23 @@ class Register extends React.Component {
                                         onChangeText={text => this.onNameChange(text)}
                                         value={this.state.name}/>
 
-
                                     <Text style={[styles.labelText]}>Email</Text>
                                     <TextInput
                                         style={[styles.textInput]}
                                         name='email'
                                         type='email'
+                                        autoCapitalize='none'
                                         onChangeText={text => this.onEmailChange(text)}
                                         value={this.state.email}/>
+
+<Text style={[styles.labelText]}>Phone</Text>
+                                    <TextInput
+                                        style={[styles.textInput]}
+                                        name='phone'
+                                        type='text'
+                                        autoCapitalize='none'
+                                        onChangeText={text => this.onPhoneChange(text)}
+                                        value={this.state.phone}/>
 
                                     <Text style={[styles.labelText]}>Password</Text>
 
@@ -133,16 +163,31 @@ class Register extends React.Component {
                                         style={[styles.textInput]}
                                         name='password'
                                         secureTextEntry={true}
+                                        autoCapitalize='none'
                                         onChangeText={text => this.onPasswordChange(text)}
                                         value={this.state.password}/>
 
                                     <View style={[styles.container]}>
-                                        <Button onPress={this.registerUser()} buttonStyle={[styles.loginButton]} title="Register"/>
+
+{this.state.registering ?
+ <TouchableHighlight  style={[styles.loginButton]}>
+ <ActivityIndicator style={{padding:10}} size="small" color="#fff" />
+ </TouchableHighlight>
+ :
+ <Button
+ onPress={() => this.registerUser()}
+ buttonStyle={[styles.loginButton]}
+ title="Register"/>
+}
+                                     
+
+                                       
+
+
 
                                         <Text style={[styles.labelText]}>Already have an account?
                                             <Text
-                                            onPress={() => navigate('Login')}
-
+                                                onPress={() => navigate('Login')}
                                                 style={{
                                                 color: THEME_COLOR,
                                                 fontWeight: 'bold'
@@ -153,46 +198,13 @@ class Register extends React.Component {
                                 </View>
                             </View>
 
-                        </View>
+                        </KeyboardAwareScrollView>
                     </SafeAreaView>
                 </View>
             </ImageBackground>
         )
     }
 }
-
-const styles = StyleSheet.create({
-    overlay: {
-        height: height,
-        width: width,
-        backgroundColor: 'rgba(0,0,0,0.7)'
-    },
-    container: {
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    textInput: {
-        width: width*0.7,
-        borderRadius: 2,
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        color:'#fff'
-    },
-    textInputContainer: {
-        marginTop: width*0.3
-    },
-    labelText: {
-        marginTop: 20,
-        color: '#fff'
-    },
-    loginButton: {
-        backgroundColor: THEME_COLOR,
-        height: 40,
-        marginTop: 20,
-        width: width*0.7
-    }
-})
 
 const mapStateToProps = state => ({isAuthenticated: state.auth.isAuthenticated, error: state.error, categories: state.categories, business: state.business, products: state.products});
 

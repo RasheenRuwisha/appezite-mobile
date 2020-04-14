@@ -26,6 +26,7 @@ import {removeCart, updateCart} from '../../actions/cartActions';
 import {THEME_COLOR} from '../../properties';
 import {TouchableOpacity, ScrollView} from 'react-native-gesture-handler';
 import moment from 'moment';
+import styles from './AboutUsStyles'
 
 const {width, height} = Dimensions.get('window');
 
@@ -74,6 +75,7 @@ class AboutUs extends React.Component {
 
     renderDeliveryHours = () => {
         let openHours = [];
+
         this
             .props
             .business
@@ -155,7 +157,11 @@ class AboutUs extends React.Component {
 
                                     <View style={[styles.container]}>
                                         <View style={[styles.noteContainer]}>
+                                        {this.props.business.business.pickUpHours.length === 0 ?
+                                            <Text>This business accepts orders 24/7</Text>
+                                            :
                                             <Text>We accept orders only during these hours</Text>
+                    }
                                         </View>
                                     </View>
 
@@ -170,7 +176,11 @@ class AboutUs extends React.Component {
                                     <View style={[styles.container]}>
                                         <View style={[styles.noteContainer]}>
 
-                                            <Text>We delivery only during these hours</Text>
+                                        {this.props.business.business.deliveryHours.length === 0 ?
+                                            <Text>This business accepts orders 24/7</Text>
+                                            :
+                                            <Text>We accept orders only during these hours</Text>
+                    }
                                         </View>
                                     </View>
 
@@ -184,59 +194,6 @@ class AboutUs extends React.Component {
         )
     }
 }
-
-const styles = StyleSheet.create({
-    flex: {
-        flex: 1
-    },
-    column: {
-        flexDirection: 'column'
-    },
-    row: {
-        flexDirection: 'row'
-    },
-    padding10: {
-        padding: 10
-    },
-    container: {
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    card: {
-        width: width *0.9,
-        margin: 10,
-        backgroundColor:'white'
-    },
-    cardButton: {
-        width: width *0.9,
-        height: 30,
-        backgroundColor: THEME_COLOR,
-        marginTop: 10,
-        justifyContent: "center",
-        alignItems: "center",
-        color: 'white'
-    },
-    cardFont: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16
-    },
-    headerFont: {
-        color: THEME_COLOR,
-        fontWeight: 'bold',
-        fontSize: 17,
-        paddingBottom: 10
-    },
-    noteContainer: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 15,
-        paddingTop:10,
-        borderTopWidth: 1,
-        borderColor:'gray',
-        width: width *0.8
-    }
-})
 
 const mapStateToProps = (state) => ({business: state.business})
 

@@ -31,3 +31,4 @@ export const TOKEN_ADDED  = "TOKEN_ADDED";
 
 export const GET_ORDERS = 'GET_ORDERS';
 export const ORDERS_LOADED = 'ORDERS_LOADED';
+export const NOTIFICATION_TOKEN = "NOTIFICATION_TOKEN";

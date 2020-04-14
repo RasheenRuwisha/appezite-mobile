@@ -3,7 +3,8 @@ import {returnErrors} from './errorActions';
 import {initCart, loadCart} from './cartActions';
 import {AsyncStorage} from 'react-native';
 import {USER_LOADING, USER_LOADED, AUTH_ERROR, REGISTER_SUCCESS, REGISTER_FAIL, LOGOUT_SUCCESS, LOGIN_SUCCESS, LOGIN_FAIL, TOKEN_ADDED} from './types';
-import { BUSINESS_ID } from '../properties' 
+import { BUSINESS_ID, BASE_URL } from '../properties' 
+import { getBusiness } from './businessActions';
 
 export const loadUser = () => (dispatch, getState) => {
     dispatch({type: USER_LOADING});
@@ -12,7 +13,7 @@ export const loadUser = () => (dispatch, getState) => {
     const jsonBody = {businessId: businessId}
     const body = JSON.stringify(jsonBody)
     axios
-        .post(`http://localhost:8082/getBusinessUser`,body, tokenConfig(getState))
+        .post(`${BASE_URL}/getBusinessUser`,body, tokenConfig(getState))
         .then(res => {
             dispatch(loadCart());
             dispatch({type: USER_LOADED, payload: res.data});
@@ -24,22 +25,26 @@ export const loadUser = () => (dispatch, getState) => {
         })
 }
 
-export const register = ({businessId, email, password}) => dispatch => {
+export const register = ({businessId, email, password, name, phone}) => (dispatch, getState) => {
     const config = {
         headers: {
             'Content-Type': 'application/json'
         }
     }
 
-    const body = JSON.stringify({businessId, email, password});
+    const notToken = getState().auth.notificationToken;
+    const body = JSON.stringify({businessId, email, password, name, phone,notToken});
 
     axios
-        .post('http://localhost:8082/createBusinessUser', body, config)
+        .post(`${BASE_URL}/createBusinessUser`, body, config)
         .then(res => {
+            console.log(res)
             dispatch({type: REGISTER_SUCCESS, payload: res.data});
             dispatch(initCart(businessId,email))
+            dispatch(getBusiness(businessId))
         })
         .catch(err => {
+            console.log(err)
             dispatch(returnErrors(err.response.data, err.response.status, 'REGISTER_FAIL'));
             dispatch({type: REGISTER_FAIL})
         })
@@ -51,20 +56,21 @@ export const logout = () => {
     }
 }
 
-export const login = ({businessId, email, password}) => dispatch => {
+export const login = ({businessId, email, password}) => (dispatch, getState) => {
     const config = {
         headers: {
             'Content-Type': 'application/json'
         }
     }
-
-    const body = JSON.stringify({businessId, email, password});
+    const notToken = getState().auth.notificationToken;
+    const body = JSON.stringify({businessId, email, password, notToken});
 
     axios
-        .post('http://localhost:8082/loginBusinessUser', body, config)
+        .post(`${BASE_URL}/loginBusinessUser`, body, config)
         .then(res => {
             dispatch({type: LOGIN_SUCCESS, payload: res.data});
             dispatch(loadCart());
+            dispatch(getBusiness(businessId))
         })
         .catch(err => {
             dispatch(returnErrors(err.response.data, err.response.status, 'LOGIN_FAIL'));
